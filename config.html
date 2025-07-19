@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .loading {
+            display: none;
+        }
+        .success-message {
+            display: none;
+        }
+        .error-message {
+            display: none;
+        }
+        .form-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .data-display {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .config-section {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Google Sheets Data Manager</h1>
+        
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <h5>Configuration</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <label for="scriptUrl" class="form-label">Google Apps Script Web App URL</label>
+                    <input type="text" class="form-control" id="scriptUrl" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
+                    <small class="form-text text-muted">Deploy your Apps Script as a web app and paste the URL here</small>
+                </div>
+                <div class="col-md-4">
+                    <label for="sheetName" class="form-label">Sheet Name</label>
+                    <input type="text" class="form-control" id="sheetName" value="Sheet1">
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Data Form -->
+        <div class="form-section">
+            <h5>Add New Row</h5>
+            <form id="addDataForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="col1" placeholder="Column 1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="col2" placeholder="Column 2" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="col3" placeholder="Column 3">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="col4" placeholder="Column 4">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Add Row</button>
+                    <button type="button" class="btn btn-info" onclick="loadData()">Refresh Data</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Update Row Form -->
+        <div class="form-section">
+            <h5>Update Existing Row</h5>
+            <div class="row">
+                <div class="col-md-2">
+                    <input type="number" class="form-control" id="updateRow" placeholder="Row #" min="1">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control" id="updateCol1" placeholder="Column 1">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control" id="updateCol2" placeholder="Column 2">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control" id="updateCol3" placeholder="Column 3">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control" id="updateCol4" placeholder="Column 4">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-warning" onclick="updateRow()">Update</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading, Success, and Error Messages -->
+        <div class="loading">
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-success success-message" role="alert">
+            <span id="successText"></span>
+        </div>
+
+        <div class="alert alert-danger error-message" role="alert">
+            <span id="errorText"></span>
+        </div>
+
+        <!-- Data Display -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Current Data</h5>
+                <small class="text-muted" id="dataCount">No data loaded</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="data-display" id="dataContainer">
+                    <p class="text-center text-muted p-4">Click "Refresh Data" to load current sheet data</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Form submission handler
+        document.getElementById('addDataForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const values = [
+                document.getElementById('col1').value,
+                document.getElementById('col2').value,
+                document.getElementById('col3').value,
+                document.getElementById('col4').value
+            ];
+            
+            await addRowToSheet(values);
+        });
+
+        async function addRowToSheet(values) {
+            const scriptUrl = document.getElementById('scriptUrl').value;
+            const sheetName = document.getElementById('sheetName').value;
+            
+            if (!scriptUrl) {
+                showError('Please enter your Google Apps Script URL');
+                return;
+            }
+
+            showLoading(true);
+            hideMessages();
+
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'append',
+                        sheetName: sheetName,
+                        values: values
+                    }),
+                    mode: 'cors'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess('Row added successfully!');
+                    document.getElementById('addDataForm').reset();
+                    await loadData(); // Refresh the data display
+                } else {
+                    showError(result.error || 'Failed to add row');
+                }
+
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function updateRow() {
+            const scriptUrl = document.getElementById('scriptUrl').value;
+            const sheetName = document.getElementById('sheetName').value;
+            const rowNumber = document.getElementById('updateRow').value;
+            
+            if (!scriptUrl || !rowNumber) {
+                showError('Please enter Script URL and row number');
+                return;
+            }
+
+            const values = [
+                document.getElementById('updateCol1').value,
+                document.getElementById('updateCol2').value,
+                document.getElementById('updateCol3').value,
+                document.getElementById('updateCol4').value
+            ];
+
+            showLoading(true);
+            hideMessages();
+
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'update',
+                        sheetName: sheetName,
+                        row: parseInt(rowNumber),
+                        values: values
+                    }),
+                    mode: 'cors'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(`Row ${rowNumber} updated successfully!`);
+                    await loadData();
+                } else {
+                    showError(result.error || 'Failed to update row');
+                }
+
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadData() {
+            const scriptUrl = document.getElementById('scriptUrl').value;
+            const sheetName = document.getElementById('sheetName').value;
+            
+            if (!scriptUrl) {
+                showError('Please enter your Google Apps Script URL');
+                return;
+            }
+
+            showLoading(true);
+            hideMessages();
+
+            try {
+                const response = await fetch(`${scriptUrl}?sheet=${sheetName}`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayData(result.data);
+                    document.getElementById('dataCount').textContent = `${result.rows} rows`;
+                } else {
+                    showError(result.error || 'Failed to load data');
+                }
+
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayData(data) {
+            const container = document.getElementById('dataContainer');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted p-4">No data found</p>';
+                return;
+            }
+
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr><th>Row</th>
+            `;
+
+            // Use first row as headers or generate column numbers
+            const headers = data[0];
+            headers.forEach((header, index) => {
+                html += `<th>${escapeHtml(header) || `Column ${index + 1}`}</th>`;
+            });
+
+            html += `</tr></thead><tbody>`;
+
+            // Display data rows with row numbers
+            data.slice(1).forEach((row, index) => {
+                html += `<tr><td><strong>${index + 2}</strong></td>`;
+                row.forEach(cell => {
+                    html += `<td>${escapeHtml(cell || '')}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        function showLoading(show) {
+            document.querySelector('.loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.querySelector('.success-message');
+            document.getElementById('successText').textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 5000);
+        }
+
+        function showError(message) {
+            const errorDiv = document.querySelector('.error-message');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.querySelector('.success-message').style.display = 'none';
+            document.querySelector('.error-message').style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Optional: Load data on page load if URL is already configured
+        window.addEventListener('load', function() {
+            const savedUrl = localStorage.getItem('googleScriptUrl');
+            if (savedUrl) {
+                document.getElementById('scriptUrl').value = savedUrl;
+            }
+        });
+
+        // Save URL for convenience
+        document.getElementById('scriptUrl').addEventListener('change', function() {
+            localStorage.setItem('googleScriptUrl', this.value);
+        });
+    </script>
+</body>
+</html>
