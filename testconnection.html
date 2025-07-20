@@ -3,128 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Google Sheets Test</title>
+    <title>Google Apps Script CORS Tester</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container mt-4">
         <div class="row justify-content-center">
-            <div class="col-md-6">
-                <h3>Test Google Sheets Connection</h3>
+            <div class="col-md-8">
+                <h2>🧪 Google Apps Script CORS Tester</h2>
+                <p class="text-muted">Test your updated Apps Script with CORS support</p>
                 
-                <div class="mb-3">
-                    <label for="scriptUrl" class="form-label">Apps Script URL</label>
-                    <input type="text" class="form-control" id="scriptUrl" placeholder="Paste your web app URL here">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="scriptUrl" class="form-label">Apps Script URL</label>
+                            <input type="text" class="form-control" id="scriptUrl" 
+                                   placeholder="https://script.google.com/macros/s/YOUR_ID/exec">
+                            <div class="form-text">Paste your NEW deployment URL here</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="testData" class="form-label">Test Data</label>
+                                    <input type="text" class="form-control" id="testData" 
+                                           value="Hello from CORS test!" placeholder="Enter test data">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sheetName" class="form-label">Sheet Name</label>
+                                    <input type="text" class="form-control" id="sheetName" 
+                                           value="Sheet1" placeholder="Sheet name">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="mb-3">
-                    <label for="testData" class="form-label">Test Data</label>
-                    <input type="text" class="form-control" id="testData" value="Test entry" placeholder="Enter test data">
+                <div class="mt-3">
+                    <button class="btn btn-success me-2" onclick="testGet()">Test GET Request</button>
+                    <button class="btn btn-primary me-2" onclick="testPost()">Test POST (Add Data)</button>
+                    <button class="btn btn-secondary" onclick="clearResults()">Clear Results</button>
                 </div>
                 
-                <button class="btn btn-primary" onclick="testConnection()">Test Connection</button>
+                <div id="result" class="mt-4"></div>
                 
-                <div id="result" class="mt-3"></div>
+                <div class="mt-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6>📋 Checklist - Did you:</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check1">
+                                <label class="form-check-label" for="check1">
+                                    Update your Apps Script with the CORS code?
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check2">
+                                <label class="form-check-label" for="check2">
+                                    Replace "YOUR_SPREADSHEET_ID_HERE" with your actual spreadsheet ID?
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check3">
+                                <label class="form-check-label" for="check3">
+                                    Create a NEW deployment (not update existing)?
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check4">
+                                <label class="form-check-label" for="check4">
+                                    Set "Execute as" to "Me" and "Who has access" to "Anyone"?
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        async function testConnection() {
-            const scriptUrl = document.getElementById('scriptUrl').value;
-            const testData = document.getElementById('testData').value;
+        function addResult(title, content, type = 'info') {
             const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger', 
+                'info': 'alert-info',
+                'warning': 'alert-warning'
+            }[type] || 'alert-info';
+            
+            const resultHTML = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    <h6>${title} <small class="text-muted">(${timestamp})</small></h6>
+                    ${content}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            resultDiv.insertAdjacentHTML('afterbegin', resultHTML);
+        }
+        
+        async function testGet() {
+            const scriptUrl = document.getElementById('scriptUrl').value;
             
             if (!scriptUrl) {
-                resultDiv.innerHTML = '<div class="alert alert-warning">Please enter your Apps Script URL</div>';
+                addResult('❌ Error', 'Please enter your Apps Script URL', 'error');
                 return;
             }
             
-            resultDiv.innerHTML = '<div class="alert alert-info">Testing connection...</div>';
+            addResult('🔄 Testing', 'Sending GET request...', 'info');
             
             try {
-                console.log('Sending request to:', scriptUrl);
-                console.log('Data:', { action: 'append', values: [testData, new Date().toISOString()] });
+                console.log('GET request to:', scriptUrl);
                 
                 const response = await fetch(scriptUrl, {
-                    method: 'POST',
+                    method: 'GET',
                     mode: 'cors',
-                    cache: 'no-cache',
-                    credentials: 'omit',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'append',
-                        sheetName: 'Sheet1',
-                        values: [testData, new Date().toISOString()]
-                    })
+                    credentials: 'omit'
                 });
                 
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
+                console.log('GET Response status:', response.status);
+                console.log('GET Response headers:', [...response.headers.entries()]);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const result = await response.json();
-                console.log('Result:', result);
+                console.log('GET Result:', result);
                 
-                if (result.success) {
-                    resultDiv.innerHTML = `
-                        <div class="alert alert-success">
-                            ✅ Success! Data was added to your sheet.
-                            <br>Message: ${result.message}
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="alert alert-danger">
-                            ❌ Error from Apps Script: ${result.error}
-                        </div>
-                    `;
-                }
+                addResult('✅ GET Success', `
+                    Server responded successfully!<br>
+                    <strong>Response:</strong> ${JSON.stringify(result, null, 2)}
+                `, 'success');
                 
             } catch (error) {
-                console.error('Full error details:', error);
+                console.error('GET Error:', error);
                 
-                let errorMessage = error.message;
                 let troubleshooting = '';
-                
-                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                    errorMessage = 'CORS/Network Error - Cannot reach your Apps Script';
+                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
                     troubleshooting = `
-                        <strong>Troubleshooting steps:</strong><br>
-                        1. Make sure your Apps Script is deployed as a "Web app"<br>
-                        2. Set "Execute as" to "Me" and "Who has access" to "Anyone"<br>
-                        3. Use the web app URL (ends with /exec), not the script editor URL<br>
-                        4. Try creating a NEW deployment instead of reusing the old one<br>
-                        5. Check browser console (F12) for more details
+                        <hr><strong>CORS Issue Detected:</strong><br>
+                        • Make sure you created a NEW deployment<br>
+                        • Check that your doOptions() function is included<br>
+                        • Verify "Anyone" has access to your web app
                     `;
                 }
                 
-                resultDiv.innerHTML = `
-                    <div class="alert alert-danger">
-                        ❌ ${errorMessage}
-                        ${troubleshooting ? '<hr>' + troubleshooting : ''}
-                    </div>
-                `;
+                addResult('❌ GET Failed', `
+                    <strong>Error:</strong> ${error.message}
+                    ${troubleshooting}
+                `, 'error');
             }
         }
         
-        // Auto-fill if URL is in localStorage
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedUrl = localStorage.getItem('googleScriptUrl');
-            if (savedUrl) {
-                document.getElementById('scriptUrl').value = savedUrl;
+        async function testPost() {
+            const scriptUrl = document.getElementById('scriptUrl').value;
+            const testData = document.getElementById('testData').value;
+            const sheetName = document.getElementById('sheetName').value;
+            
+            if (!scriptUrl) {
+                addResult('❌ Error', 'Please enter your Apps Script URL', 'error');
+                return;
             }
-        });
+            
+            const postData = {
+                action: 'append',
+                sheetName: sheetName,
+                values: [testData, new Date().toISOString(), 'Test from CORS tester']
+            };
+            
+            addResult('🔄 Testing', `Sending POST request with data: <code>${JSON.stringify(postData)}</code>`, 'info');
+            
+            try {
+                console.log('POST request to:', scriptUrl);
+                console.log('POST data:', postData);
+                
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(postData)
+                });
+                
+                console.log('POST Response status:', response.status);
+                console.log('POST Response headers:', [...response.headers.entries()]);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('POST Result:', result);
+                
+                if (result.success) {
+                    addResult('🎉 POST Success', `
+                        Data successfully added to your Google Sheet!<br>
+                        <strong>Message:</strong> ${result.message}<br>
+                        <strong>Timestamp:</strong> ${result.timestamp}
+                    `, 'success');
+                } else {
+                    addResult('⚠️ POST Partial Success', `
+                        Request succeeded but Apps Script reported an error:<br>
+                        <strong>Error:</strong> ${result.error}
+                    `, 'warning');
+                }
+                
+            } catch (error) {
+                console.error('POST Error:', error);
+                
+                let troubleshooting = '';
+                if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+                    troubleshooting = `
+                        <hr><strong>CORS Issue:</strong><br>
+                        • Your Apps Script may not have CORS headers<br>
+                        • Try creating a completely NEW deployment<br>
+                        • Make sure the doPost() function handles CORS
+                    `;
+                } else if (error.message.includes('404')) {
+                    troubleshooting = `
+                        <hr><strong>404 Error:</strong><br>
+                        • Check that your URL ends with /exec<br>
+                        • Verify the deployment ID is correct
+                    `;
+                }
+                
+                addResult('❌ POST Failed', `
+                    <strong>Error:</strong> ${error.message}
+                    ${troubleshooting}
+                `, 'error');
+            }
+        }
         
-        // Save URL when changed
-        document.getElementById('scriptUrl').addEventListener('input', function() {
-            localStorage.setItem('googleScriptUrl', this.value);
-        });
+        function clearResults() {
+            document.getElementById('result').innerHTML = '';
+        }
     </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
