@@ -1,1 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Google Sheets Test</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <h3>Test Google Sheets Connection</h3>
+                
+                <div class="mb-3">
+                    <label for="scriptUrl" class="form-label">Apps Script URL</label>
+                    <input type="text" class="form-control" id="scriptUrl" placeholder="Paste your web app URL here">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="testData" class="form-label">Test Data</label>
+                    <input type="text" class="form-control" id="testData" value="Test entry" placeholder="Enter test data">
+                </div>
+                
+                <button class="btn btn-primary" onclick="testConnection()">Test Connection</button>
+                
+                <div id="result" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        async function testConnection() {
+            const scriptUrl = document.getElementById('scriptUrl').value;
+            const testData = document.getElementById('testData').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!scriptUrl) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">Please enter your Apps Script URL</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="alert alert-info">Testing connection...</div>';
+            
+            try {
+                console.log('Sending request to:', scriptUrl);
+                console.log('Data:', { action: 'append', values: [testData, new Date().toISOString()] });
+                
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'append',
+                        sheetName: 'Sheet1',
+                        values: [testData, new Date().toISOString()]
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('Result:', result);
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ Success! Data was added to your sheet.
+                            <br>Message: ${result.message}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            ❌ Error from Apps Script: ${result.error}
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Full error details:', error);
+                
+                let errorMessage = error.message;
+                let troubleshooting = '';
+                
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    errorMessage = 'CORS/Network Error - Cannot reach your Apps Script';
+                    troubleshooting = `
+                        <strong>Troubleshooting steps:</strong><br>
+                        1. Make sure your Apps Script is deployed as a "Web app"<br>
+                        2. Set "Execute as" to "Me" and "Who has access" to "Anyone"<br>
+                        3. Use the web app URL (ends with /exec), not the script editor URL<br>
+                        4. Try creating a NEW deployment instead of reusing the old one<br>
+                        5. Check browser console (F12) for more details
+                    `;
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ ${errorMessage}
+                        ${troubleshooting ? '<hr>' + troubleshooting : ''}
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-fill if URL is in localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedUrl = localStorage.getItem('googleScriptUrl');
+            if (savedUrl) {
+                document.getElementById('scriptUrl').value = savedUrl;
+            }
+        });
+        
+        // Save URL when changed
+        document.getElementById('scriptUrl').addEventListener('input', function() {
+            localStorage.setItem('googleScriptUrl', this.value);
+        });
+    </script>
+</body>
+</html>
