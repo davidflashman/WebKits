@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS and POST Test</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>🧪 CORS and POST Test</h2>
+        <p>Use this to test your Apps Script deployment before using the main interface.</p>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="testUrl" class="form-label">Your Apps Script URL</label>
+                    <input type="text" class="form-control" id="testUrl" 
+                           placeholder="https://script.google.com/macros/s/DEPLOYMENT_ID/exec">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="testSheet" class="form-label">Sheet Name</label>
+                    <input type="text" class="form-control" id="testSheet" value="Sheet40">
+                </div>
+                
+                <div class="d-grid gap-2 d-md-block">
+                    <button class="btn btn-primary" onclick="testGet()">Test GET (Read Data)</button>
+                    <button class="btn btn-warning" onclick="testPost()">Test POST (Add Row)</button>
+                    <button class="btn btn-info" onclick="testUpdate()">Test UPDATE (Update Row 1)</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="results" class="mt-3"></div>
+    </div>
+
+    <script>
+        function addResult(title, content, type = 'info') {
+            const results = document.getElementById('results');
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger',
+                'warning': 'alert-warning',
+                'info': 'alert-info'
+            }[type] || 'alert-info';
+            
+            const div = document.createElement('div');
+            div.className = `alert ${alertClass}`;
+            div.innerHTML = `<h6>${title}</h6>${content}`;
+            results.appendChild(div);
+        }
+
+        async function testGet() {
+            const url = document.getElementById('testUrl').value;
+            const sheet = document.getElementById('testSheet').value;
+            
+            if (!url) {
+                addResult('❌ Error', 'Please enter your Apps Script URL', 'error');
+                return;
+            }
+
+            try {
+                console.log('Testing GET request to:', `${url}?sheet=${sheet}`);
+                
+                const response = await fetch(`${url}?sheet=${sheet}`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                console.log('GET Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('GET Response data:', data);
+                
+                if (data.success) {
+                    addResult('✅ GET Test Success', 
+                        `Retrieved ${data.rows} rows from ${sheet}<br>
+                         <small>Sample: ${JSON.stringify(data.data?.slice(0,2) || [])}</small>`, 
+                        'success');
+                } else {
+                    addResult('❌ GET Test Failed', data.error || 'Unknown error', 'error');
+                }
+
+            } catch (error) {
+                console.error('GET Test Error:', error);
+                addResult('❌ GET Test Failed', 
+                    `${error.message}<br><small>Check console for details</small>`, 
+                    'error');
+            }
+        }
+
+        async function testPost() {
+            const url = document.getElementById('testUrl').value;
+            const sheet = document.getElementById('testSheet').value;
+            
+            if (!url) {
+                addResult('❌ Error', 'Please enter your Apps Script URL', 'error');
+                return;
+            }
+
+            const testData = {
+                action: 'append',
+                sheetName: sheet,
+                values: ['Test1', 'Test2', 'Test3', 'Test4']
+            };
+
+            try {
+                console.log('Testing POST request with data:', testData);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData),
+                    mode: 'cors'
+                });
+
+                console.log('POST Response status:', response.status);
+                console.log('POST Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('POST Error response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('POST Response data:', data);
+                
+                if (data.success) {
+                    addResult('✅ POST Test Success', 
+                        `${data.message}<br><small>Action: ${data.action}</small>`, 
+                        'success');
+                } else {
+                    addResult('❌ POST Test Failed', data.error || 'Unknown error', 'error');
+                }
+
+            } catch (error) {
+                console.error('POST Test Error:', error);
+                addResult('❌ POST Test Failed', 
+                    `${error.message}<br><small>This usually means CORS issues or deployment problems</small>`, 
+                    'error');
+            }
+        }
+
+        async function testUpdate() {
+            const url = document.getElementById('testUrl').value;
+            const sheet = document.getElementById('testSheet').value;
+            
+            if (!url) {
+                addResult('❌ Error', 'Please enter your Apps Script URL', 'error');
+                return;
+            }
+
+            const testData = {
+                action: 'update',
+                sheetName: sheet,
+                row: 1,
+                values: ['Updated1', 'Updated2', 'Updated3', 'Updated4']
+            };
+
+            try {
+                console.log('Testing UPDATE request with data:', testData);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData),
+                    mode: 'cors'
+                });
+
+                console.log('UPDATE Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('UPDATE Error response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('UPDATE Response data:', data);
+                
+                if (data.success) {
+                    addResult('✅ UPDATE Test Success', 
+                        `${data.message}<br><small>Action: ${data.action}</small>`, 
+                        'success');
+                } else {
+                    addResult('❌ UPDATE Test Failed', data.error || 'Unknown error', 'error');
+                }
+
+            } catch (error) {
+                console.error('UPDATE Test Error:', error);
+                addResult('❌ UPDATE Test Failed', 
+                    `${error.message}<br><small>Check console for detailed error info</small>`, 
+                    'error');
+            }
+        }
+    </script>
+</body>
+</html>
