@@ -1,1 +1,740 @@
-n
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>STEM Fest Station Management</title>
+ <!-- <link rel="stylesheet" href="https://drive.google.com/file/d/1NPyRrif8BGNqKbXWfG09zLrE8ga00Et6/view?usp=sharing">  -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .loadMasterSheet {
+      background-color: #FBD603;
+    }
+
+    .light-gray {
+      background-color: #f8f9fa !important;
+      /* Lighter gray - you can adjust the hex code as needed */  
+    }
+
+    .main-row {
+      background-color: #d3d3d3 !important;
+      /* Light gray for the "Main" container type */
+      color: darkblue;
+    }
+
+    .table-bordered th,
+    .table-bordered td {
+      border: 1px solid #dee2e6 !important;
+    }
+
+    .radio-spacing input[type="radio"] {
+      margin-right: 10px;
+    }
+
+    .radio-spacing label {
+      margin-right: 20px;
+
+      .nav-tabs .nav-item .nav-link {
+        background-color: #0080FF;
+        color: #FFF;
+      }
+
+      .nav-tabs .nav-item .nav-link.active {
+        color: #0080FF;
+      }
+
+      .tab-content {
+        border: 1px solid #dee2e6;
+        border-top: transparent;
+        padding: 15px;
+      }
+
+      .tab-content .tab-pane {
+        background-color: #FFF;
+        color: #0080FF;
+        min-height: 200px;
+        height: auto;
+      }
+  </style>
+
+</head>
+
+<body>
+  <div class="container mt-3">
+    <ul class="nav nav-tabs">
+      <li class="nav-item">
+        <a class="nav-link active" data-toggle="tab" href="#display">STEM Fest Stations</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#edit">STEM Fest Station Contents</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#selectMultiple">Select Multiple Stations</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#loadMasterSheet">LoadMaster Sheet</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#printMultiStation">Print Multi-Station Selections</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#search">Search</a>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div id="display" class="container tab-pane active"><br>
+        <h3>Select a Grade Level</h3>
+        <select id="gradeLevelDropdown" class="form-control" onchange="updateStations()">
+          <option value="">Select a Grade Level</option>
+          <option value="K2">K2</option>
+          <option value="3rd-12th">3rd-12th</option>
+        </select>
+        <div id="stationsDisplay"></div>
+      </div>
+      <div id="edit" class="container tab-pane fade"><br>
+        <h3>Display STEM Fest Station Contents</h3>
+        <div style="text-align: right;">
+          <button class="btn btn-primary" onclick="printPageContents()">Print Page</button>
+        </div>
+        <div id="stationContentsDisplay"></div>
+      </div>
+
+      <div id="selectMultiple" class="tab-pane fade"><br>
+        <h3>Select Multiple Stations</h3>
+        <div style="display: flex; justify-content: space-between;">
+          <div>
+            <input type="radio" name="action" value="deploy" id="deploy" onclick="loadMultipleStations()">
+            <label for="deploy">Deploy</label>
+            <input type="radio" name="action" value="print" id="print" onclick="loadMultipleStations()">
+            <label for="print">Print</label>
+          </div>
+          <div style="text-align: right; margin-top: 10px;">
+            <button class="btn btn-primary" onclick="processSelections()">Process Selections</button>
+          </div>
+        </div>
+        <div id="multipleStationsDisplay"></div>
+
+
+      </div>
+
+      <div id="loadMasterSheet" class="container tab-pane fade"><br>
+ <div style="text-align: right; margin-bottom: 10px;">
+            <button class="btn btn-primary" onclick="printLoadMasterSheet()">Print Sheet -Deployment Sheet</button>
+          </div>
+        
+          <div id="currentDateTime">
+            <span id="currentDateTime"></span>
+          </div>
+
+        <div id="loadMasterSheetDisplay">
+       
+          <div class="form-group">
+            <div class="row">
+              <div class="col-md-6">
+                <label for="selectMonth">Select Month:</label>
+                <select class="form-control" id="selectMonth">
+                <option value="January">January</option>
+                <option value="February">February</option>
+                <option value="March">March</option>
+                <option value="April">April</option>
+                <option value="May">May</option>
+                <option value="June">June</option>
+                <option value="July">July</option>
+                <option value="August">August</option>
+                <option value="September">September</option>  
+                <option value="October">October</option>
+                <option value="November">November</option>
+                <option value="December">December</option>
+              </select>
+              </div>
+              <div class="col-md-6">
+                <label for="eventName">Event Name:</label>
+                <select class="form-control" id="eventName"></select>
+              </div>
+            </div>
+          </div>
+          <div id="LoadPrintHere">
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <div id="printMultiStation" class="tab-pane fade"><br>
+      <h3>Print Multi-Station Selections</h3>
+      <div style="text-align: right; margin-bottom: 10px;">
+        <button class="btn btn-primary" onclick="printMultiStationSelections()">Print Sheet - PrintOut</button>
+      </div>
+
+      <div id="printMultiStationDisplay">
+
+
+      </div>
+    </div>
+
+    <div id="search" class="container tab-pane fade"><br>
+      <h3>Search Options</h3>
+      <div class="radio-spacing">
+        <input type="radio" name="searchOption" value="sortItems" id="sortItems" onclick="searchOptionChanged()">
+        <label for="sortItems">Sort STEM Fest Station's Items</label>
+        <input type="radio" name="searchOption" value="showReplenishments" id="showReplenishments" onclick="searchOptionChanged()">
+        <label for="showReplenishments">Show Replenishments</label>
+        <input type="radio" name="searchOption" value="option3" id="option3" onclick="searchOptionChanged()">
+        <label for="option3">Option 3</label>
+        <input type="radio" name="searchOption" value="option4" id="option4" onclick="searchOptionChanged()">
+        <label for="option4">Option 4</label>
+      </div>
+      <div style="text-align: right; margin-top: 10px;">
+        <button class="btn btn-primary" onclick="printSearchResults()">Print Results</button>
+      </div>
+      <div id="searchResultsDisplay"></div>
+    </div>
+
+
+
+    <script>
+   document.getElementById('selectMonth').addEventListener('change', fetchEvents);
+
+
+    function fetchEvents() {
+      console.log("fetchEvents called"); // Debugging statement
+      var selectMonth = document.getElementById('selectMonth').value;
+      console.log("Selected month: " + selectMonth); // Debugging statement
+      google.script.run.withSuccessHandler(function(events) {
+        events.sort(); // Sort events alphabetically
+        var select = document.getElementById('eventName');
+        select.innerHTML = ''; // Clear previous options
+        events.forEach(function(event) {
+          var option = document.createElement('option');
+          option.value = event;
+          option.text = event;
+          select.appendChild(option);
+        });
+      }).getEventsByMonth(selectMonth);
+    }
+
+
+function updateDateTime() {
+        // create a new `Date` object
+        const now = new Date();
+
+        // get the current date and time as a string
+        const currentDateTime = now.toLocaleString();
+
+        // update the `textContent` property of the `span` element with the `id` of `datetime`
+        document.querySelector('#currentDateTime').textContent = currentDateTime;
+      }
+
+      // call the `updateDateTime` function every second
+      setInterval(updateDateTime, 1000);
+
+
+
+
+
+
+
+    function updateStations() {
+      var gradeLevel = document.getElementById('gradeLevelDropdown').value;
+      google.script.run.withSuccessHandler(function(stations) {
+        var html = '<table class="table table-bordered">';
+        html += '<tr><th>Select</th><th>Station Grade</th><th>Station Number</th><th>Station Name</th><th>Replenish</th><th>Storage Location</th><th>Electricity</th><th>Tablecloth Name</th></tr>';
+        if (stations.length > 0) {
+          stations.forEach(function(station, index) {
+            var rowClass = index % 2 === 0 ? 'light-gray' : 'table-secondary';
+            html += '<tr class="' + rowClass + '">';
+            html += '<td><input type="radio" name="stationSelect" value="' + station.number + '" onchange="displayStationContents(this.value)"></td>';
+            html += '<td>' + station.grade + '</td>';
+            html += '<td>' + station.number + '</td>';
+            html += '<td>' + station.name + '</td>';
+            html += '<td>' + station.replenish + '</td>';
+            html += '<td>' + station.location + '</td>';
+            html += '<td>' + station.electricity + '</td>';
+            html += '<td>' + station.tableclothName + '</td>';
+            html += '</tr>';
+          });
+        } else {
+          html += '<tr><td colspan="8">No stations found for selected grade.</td></tr>';
+        }
+        html += '</table>';
+        document.getElementById('stationsDisplay').innerHTML = html;
+      }).getStationsByGrade(gradeLevel);
+    }
+
+    function displayStationContents(stationNumber) {
+      console.log('Displaying contents for station number:', stationNumber);
+      google.script.run.withSuccessHandler(function(contents) {
+        console.log('Station contents:', contents);
+        var html = '<table class="table table-bordered table-sm">';
+        var mainRowDisplayed = false;
+        contents.forEach(function(row) {
+          if (row.containerType === 'Main' && !mainRowDisplayed) {
+            html += '<tr class="main-row"><th>Station Number</th><th>Station Name</th><th>Station Grade</th><th>Station Color Code</th><th>Electricity</th><th>Storage Location</th><th>Tablecloth Name</th></tr>';
+            html += '<tr class="main-row">';
+            html += '<td>' + row.StaNumber + '</td>';
+            html += '<td>' + row.name + '</td>';
+            html += '<td>' + row.grade + '</td>';
+            html += '<td>' + row.colorCode + '</td>';
+            html += '<td>' + row.electricity + '</td>';
+            html += '<td>' + row.location + '</td>';
+            html += '<td>' + row.tableclothName + '</td>';
+            html += '</tr>';
+            mainRowDisplayed = true;
+            html += '<tr><th>Container Type</th><th>Station Item</th><th>Item Cost</th><th>Replenish</th></tr>';
+          } else {
+            html += '<tr>';
+            html += '<td>' + row.containerType + '</td>';
+            html += '<td>' + row.item + '</td>';
+            html += '<td>' + row.cost + '</td>';
+            html += '<td>' + row.replenish + '</td>';
+            html += '</tr>';
+          }
+        });
+        html += '</table>';
+        document.getElementById('stationContentsDisplay').innerHTML = html;
+        // Switch to the "Display Selected STEM Fest Station Contents" tab
+        $('a[href="#edit"]').tab('show');
+      }).getStationContents(stationNumber).catch(function(error) {
+        console.error('Error fetching station contents:', error);
+      });
+    }
+
+    function loadMultipleStations() {
+      google.script.run.withSuccessHandler(function(contents) {
+        console.log("Contents received: ", contents); // Log contents for debugging
+
+        var html = '<table class="table table-bordered table-sm">';
+        html += '<tr  style="font-weight: bold; background-color: #f8f9fa;"><th>Select</th><th>Station Number</th><th>Station Name</th><th>Station Grade</th><th>Station Color Code</th><th>Electricity</th><th>Storage Location</th><th>Tablecloth Name</th></tr>';
+
+        // Filter contents to only include rows where Container Type is "Main"
+        const mainRows = contents.filter(row => row['Container Type'] === 'Main');
+        console.log("Filtered Main Rows: ", mainRows); // Log filtered rows for debugging
+
+        // Generate HTML rows for each filtered row
+        mainRows.forEach(row => {
+          html += '<tr>';
+          html += '<td><input type="checkbox" name="station" value="' + row['Station Number'] + '"></td>';
+          html += '<td>' + row['Station Number'] + '</td>';
+          html += '<td>' + row['Station Name'] + '</td>';
+          html += '<td>' + row['Station Grade'] + '</td>';
+          html += '<td>' + row['Station Color Code'] + '</td>';
+          html += '<td>' + row['Electricity'] + '</td>';
+          html += '<td>' + row['Storage Location'] + '</td>';
+          html += '<td>' + row['Tablecloth Name'] + '</td>';
+          html += '</tr>';
+        });
+
+        html += '</table>';
+        console.log("Generated HTML: ", html); // Log generated HTML for debugging
+        document.getElementById('multipleStationsDisplay').innerHTML = html; // Insert HTML into DOM
+        console.log("HTML inserted into #multipleStationsDisplay"); // Log confirmation of HTML insertion
+      }).getMasterStations();
+    }
+
+    // Call this function when the tab is shown
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+      if (e.target.getAttribute('href') === '#selectMultiple') {
+        loadMultipleStations();
+      }
+    });
+
+
+    
+
+    function printMultiStationSelections() {
+      var printContents = document.getElementById('printMultiStationDisplay').innerHTML;     //printMultiStation
+      var originalContents = document.body.innerHTML;
+
+      document.body.innerHTML = printContents;
+
+      window.print();
+ document.body.innerHTML = originalContents;
+        reattachEventListeners();
+  //    document.body.innerHTML = originalContents;
+
+  //    location.reload();
+    }
+
+    function printPageContents() {
+      var printContents = document.getElementById('stationContentsDisplay').innerHTML;
+      var originalContents = document.body.innerHTML;
+
+      document.body.innerHTML = printContents;
+
+      window.print();
+
+      document.body.innerHTML = originalContents;
+        reattachEventListeners();
+    //  location.reload();
+    }
+ 
+
+
+ function VprintLoadMasterSheet() {
+        var printContents = document.getElementById('loadMasterSheetDisplay').innerHTML; //loadMasterSheet loadMasterSheetDisplay
+        var originalContents = document.body.innerHTML;
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+        reattachEventListeners();
+      }
+
+
+// Add these event listeners to save the selected values
+document.getElementById('selectMonth').addEventListener('change', saveSelectedValues);
+document.getElementById('eventName').addEventListener('change', saveSelectedValues);
+
+// Function to save the selected values
+
+
+function saveSelectedValues() {
+  localStorage.setItem('selectedMonth', document.getElementById('selectMonth').value);
+  localStorage.setItem('selectedEvent', document.getElementById('eventName').value);
+}
+
+
+function printLoadMasterSheet() {
+  // Save the current selections
+  var selectedMonth = document.getElementById('selectMonth').value;
+  var selectedEvent = document.getElementById('eventName').value;
+  localStorage.setItem('selectedMonth', selectedMonth);
+  localStorage.setItem('selectedEvent', selectedEvent);
+
+  // Fetch contents for printing
+  var printContents = document.getElementById('LoadPrintHere').innerHTML;
+
+  // Create a new window for printing
+  var printWindow = window.open('', '_blank', 'width=800,height=600');
+  printWindow.document.write('<html><head><title>Print</title>');
+  printWindow.document.write('<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">');
+  printWindow.document.write('</head><body>');
+  printWindow.document.write('<h3>Selected Month: ' + selectedMonth + '</h3>');
+  printWindow.document.write('<h3>Selected Event: ' + selectedEvent + '</h3>');
+  printWindow.document.write(printContents);
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.focus();
+
+  // Print and handle the closing of the window
+  printWindow.print();
+  printWindow.onafterprint = function() {
+    printWindow.close();
+    // Restore the selections in the original window after printing
+    document.getElementById('selectMonth').value = selectedMonth;
+    document.getElementById('eventName').value = selectedEvent;
+  };
+}
+
+
+
+
+
+
+
+
+
+      function reattachEventListeners() {
+        document.getElementById('selectMonth').addEventListener('change', fetchEvents);
+      }
+
+
+
+    function VprintLoadMasterSheet() {
+//      var printContents = document.getElementById('LoadPrintHere').innerHTML;
+      var printContents = document.getElementById('loadMasterSheetDisplay').innerHTML;  //loadMasterSheetDisplay   LoadPrintHere
+      var originalContents = document.body.innerHTML;
+
+      document.body.innerHTML = printContents;
+
+      window.print();
+
+      document.body.innerHTML = originalContents;
+
+      location.reload();
+    }
+
+
+
+
+    function displayDeploySelections(contents, selectedStations) {
+      var groupedData = {};
+      contents.forEach(function(row) {
+        var stationNumber = row['Station Number'];
+        if (!groupedData[stationNumber]) {
+          groupedData[stationNumber] = [];
+        }
+        groupedData[stationNumber].push(row);
+      });
+
+      var html = '<table class="table table-bordered table-sm">';
+      Object.keys(groupedData).forEach(function(stationNumber) {
+        if (selectedStations.includes(stationNumber)) {
+          var rows = groupedData[stationNumber];
+          rows.sort(function(a, b) {
+            if (a['Container Type'] === 'Main') return -1;
+            if (b['Container Type'] === 'Main') return 1;
+            return a['Station Code'] - b['Station Code'];
+          });
+
+          var previousContainerType = null;
+          rows.forEach(function(row) {
+            if (row['Container Type'] === 'Main') {
+              html += '<tr class="main-row">';
+              html += '<td>' + row['Station Number'] + '</td>';
+              html += '<td>' + row['Station Grade'] + '</td>';
+              html += '<td>' + row['Station Name'] + '</td>';
+              html += '<td>' + row['Station Color Code'] + '</td>';
+              html += '<td>' + row['Storage Location'] + '</td>';
+              html += '<td>' + row['Replenish'] + '</td>';
+              html += '<td>' + row['Electricity'] + '</td>';
+              html += '<td>' + row['Tablecloth Name'] + '</td>';
+              html += '</tr>';
+            } else if (row['Station Code'] === 2 && row['Container Type'] !== previousContainerType) {
+              console.log('Displaying row for Station Code 2:', row);
+              html += '<tr>';
+              html += '<td></td>';
+              html += '<td>' + row['Container Type'] + '</td>';
+              html += '</tr>';
+            } else if (row['Station Code'] === 3) {
+              console.log('Displaying row for Station Code 3:', row);
+              html += '<tr>';
+              html += '<td></td>';
+              html += '<td>' + row['Container Type'] + '</td>';
+              html += '<td>' + row['Station Item'] + '</td>';
+              html += '</tr>';
+            }
+            previousContainerType = row['Container Type'];
+          });
+        }
+      });
+      html += '</table>';
+      document.getElementById('LoadPrintHere').innerHTML = html;  //loadMasterSheetDisplay  LoadPrintHere
+      $('a[href="#loadMasterSheet"]').tab('show');   //loadMasterSheetDisplay
+    }
+
+
+
+    function processSelections() {
+  var action = document.querySelector('input[name="action"]:checked').value;
+  var selectedStations = [];
+  
+  // Collect all selected stations
+  document.querySelectorAll('#multipleStationsDisplay input[name="station"]:checked').forEach(function(checkbox) {
+    selectedStations.push(checkbox.value);
+  });
+
+  console.log('Selected stations:', selectedStations);
+
+  if (action === 'print') {
+    console.log('Print action selected'); // Debugging log
+
+    google.script.run.withSuccessHandler(function(contents) {
+      console.log('Contents received:', contents); // Debugging log
+
+      var html = '<table class="table table-bordered table-sm">';
+      html += '<tr><th>Station Number</th><th>Station Name</th><th>Station Grade</th><th>Station Color Code</th><th>Electricity</th><th>Storage Location</th><th>Tablecloth Name</th><th>Container Type</th><th>Station Item</th><th>Item Cost</th><th>Replenish</th></tr>';
+
+      const groupedContents = contents.reduce((acc, row) => {
+        if (!acc[row['Station Number']]) {
+          acc[row['Station Number']] = [];
+        }
+        acc[row['Station Number']].push(row);
+        return acc;
+      }, {});
+
+      Object.keys(groupedContents).forEach(stationNumber => {
+        const stationRows = groupedContents[stationNumber];
+        stationRows.sort((a, b) => {
+          if (a['Container Type'] === 'Main') return -1;
+          if (b['Container Type'] === 'Main') return 1;
+          return a['Container Type'].localeCompare(b['Container Type']);
+        });
+
+        stationRows.forEach(row => {
+          if (selectedStations.includes(row['Station Number'].toString())) {
+            if (row['Container Type'] === 'Main') {
+              html += '<tr style="font-weight: bold; background-color: #f8f9fa;">';
+              html += '<td>' + row['Station Number'] + '</td>';
+              html += '<td>' + row['Station Name'] + '</td>';
+              html += '<td>' + row['Station Grade'] + '</td>';
+              html += '<td>' + row['Station Color Code'] + '</td>';
+              html += '<td>' + row['Electricity'] + '</td>';
+              html += '<td>' + row['Storage Location'] + '</td>';
+              html += '<td>' + row['Tablecloth Name'] + '</td>';
+              html += '<td></td><td></td><td></td><td></td>';
+              html += '</tr>';
+            } else {
+              html += '<tr>';
+              html += '<td></td>';
+              html += '<td>' + row['Container Type'] + '</td>';
+              html += '<td>' + row['Station Item'] + '</td>';
+              html += '<td>' + row['Item Cost'] + '</td>';
+              html += '<td>' + row['Replenish'] + '</td>';
+              html += '</tr>';
+            }
+          }
+        });
+      });
+
+      html += '</table>';
+      console.log('Generated HTML:', html); // Debugging log
+
+      document.getElementById('printMultiStationDisplay').innerHTML = html; // Display the results in the correct section
+      $('a[href="#printMultiStation"]').tab('show'); // Ensure the correct tab is shown
+    }).getMasterStations(selectedStations).catch(function(error) {
+      console.error('Error retrieving data:', error); // Error handling log
+    });
+    
+  } else if (action === 'deploy') {
+    // Logic for handling the "deploy" action
+    google.script.run.withSuccessHandler(function(contents) {
+      displayDeploySelections(contents, selectedStations);
+    }).getAllGroupedMasterStations();
+  }
+}
+
+
+
+
+
+
+function searchOptionChanged() {
+    var searchOption = document.querySelector('input[name="searchOption"]:checked').value;
+    if (searchOption === 'sortItems') {
+        google.script.run.withSuccessHandler(function(contents) {
+            var html = '<h3>STEM Fest Stations Item Sort</h3>'; // Adding the header
+            html += '<table class="table table-bordered table-sm">';
+            html += '<tr><th>Station Item</th><th>Container Type</th><th>Item Cost</th><th>Station Grade</th><th>Station Number</th><th>Station Name</th></tr>';
+
+            contents.sort((a, b) => a['Station Item'].localeCompare(b['Station Item']));
+
+            contents.forEach(function(row) {
+                if (row['Container Type'] !== 'Main') {  // Ignore rows where 'Container Type' is 'Main'
+                    html += '<tr>';
+                    html += '<td>' + row['Station Item'] + '</td>';
+                    html += '<td>' + row['Container Type'] + '</td>';
+                    html += '<td>' + row['Item Cost'] + '</td>';
+                    html += '<td>' + row['Station Grade'] + '</td>';
+                    html += '<td>' + row['Station Number'] + '</td>';
+                    html += '<td>' + row['Station Name'] + '</td>';
+                    html += '</tr>';
+                }
+            });
+
+            html += '</table>';
+            document.getElementById('searchResultsDisplay').innerHTML = html;
+        }).getAllMasterStations();
+    } else if (searchOption === 'showReplenishments') {
+        google.script.run.withSuccessHandler(function(contents) {
+            var groupedData = {};
+            contents.forEach(function(row) {
+                var stationNumber = row['Station Number'];
+                if (!groupedData[stationNumber]) {
+                    groupedData[stationNumber] = []; 
+                }
+                groupedData[stationNumber].push(row);
+            });
+
+            var html = '<h3>STEM Fest Stations Needing Replenishments</h3>'; // Adding the header
+            html += '<table class="table table-bordered table-sm">';
+            Object.keys(groupedData).forEach(function(stationNumber) {
+                var rows = groupedData[stationNumber];
+                rows.sort(function(a, b) {
+                    if (a['Container Type'] === 'Main') return -1;
+                    if (b['Container Type'] === 'Main') return 1;
+                    return a['Station Code'] - b['Station Code'];
+                });
+
+                var mainRowDisplayed = false;
+                rows.forEach(function(row) {
+                    if (row['Replenish'] === 'Replenish') {
+                        if (row['Container Type'] === 'Main' && !mainRowDisplayed) {
+                            html += '<tr class="main-row">';
+                            html += '<td>' + row['Station Number'] + '</td>';
+                            html += '<td>' + row['Station Grade'] + '</td>';
+                            html += '<td>' + row['Station Name'] + '</td>';
+                            html += '<td>' + row['Station Color Code'] + '</td>';
+                            html += '<td>' + row['Storage Location'] + '</td>';
+                            html += '<td>' + row['Replenish'] + '</td>';
+                            html += '<td>' + row['Electricity'] + '</td>';
+                            html += '<td>' + row['Tablecloth Name'] + '</td>';
+                            html += '</tr>';
+                            mainRowDisplayed = true;
+                        } else if (row['Station Code'] !== 1) {
+                            html += '<tr>';
+                            html += '<td></td>';
+                            html += '<td>' + row['Container Type'] + '</td>';
+                            html += '<td>' + row['Station Item'] + '</td>';
+                            html += '<td>' + row['Replenish'] + '</td>';
+                            html += '</tr>';
+                        }
+                    }
+                });
+            });
+            html += '</table>';
+            document.getElementById('searchResultsDisplay').innerHTML = html;
+        }).getAllMasterStations();
+    }
+}
+
+
+ 
+    
+    
+        function updateCurrentDateTime() {
+      var now = new Date();
+      var formattedDateTime = now.toLocaleString();
+      document.getElementById('currentDateTime').innerHTML = formattedDateTime;
+    }
+
+
+  function printSearchResults() {
+        var printContents = document.getElementById('searchResultsDisplay').innerHTML;
+        var originalContents = document.body.innerHTML;
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+        $('a[href="#search"]').tab('show'); // Switch back to the "Search" tab
+      }
+
+
+    function loadMasterEventsDropdown() {
+      google.script.run.withSuccessHandler(function(events) {
+        var dropdown = document.getElementById('masterEventsDropdown');
+        dropdown.innerHTML = '<option value="">Select an Event</option>';
+        events.forEach(function(event) {
+          var option = document.createElement('option');
+          option.value = event;
+          option.text = event;
+          dropdown.appendChild(option);
+        });
+      }).getImportMasterEvents();
+    }
+
+    // Call this function when the tab is shown
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+      if (e.target.getAttribute('href') === '#selectMultiple') {
+        loadMultipleStations();
+      }
+      if (e.target.getAttribute('href') === '#loadMasterSheet') {
+        loadMasterEventsDropdown();
+        updateCurrentDateTime();
+        setInterval(updateCurrentDateTime, 60000); // Update every minute
+      }
+    });
+
+    // Initialize dropdown and current date/time on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCurrentDateTime();
+      setInterval(updateCurrentDateTime, 60000); // Update every minute
+    });
+    </script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
