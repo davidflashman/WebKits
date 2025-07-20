@@ -314,6 +314,7 @@
 
         function displayData(data) {
             const container = document.getElementById('dataContainer');
+            console.log('Displaying data:', data);
             
             if (!data || data.length === 0) {
                 container.innerHTML = '<p class="text-center text-muted p-4">No data found</p>';
@@ -327,17 +328,19 @@
                             <tr><th>Row</th>
             `;
 
-            // Use first row as headers or generate column numbers
-            const headers = data[0];
-            headers.forEach((header, index) => {
-                html += `<th>${escapeHtml(header) || `Column ${index + 1}`}</th>`;
-            });
+            // Use first row as headers if it exists
+            if (data.length > 0) {
+                const headers = data[0];
+                headers.forEach((header, index) => {
+                    html += `<th>${escapeHtml(header) || `Column ${index + 1}`}</th>`;
+                });
+            }
 
             html += `</tr></thead><tbody>`;
 
-            // Display data rows with row numbers
-            data.slice(1).forEach((row, index) => {
-                html += `<tr><td><strong>${index + 2}</strong></td>`;
+            // Display all rows with row numbers (including the first row as data)
+            data.forEach((row, index) => {
+                html += `<tr><td><strong>${index + 1}</strong></td>`;
                 row.forEach(cell => {
                     html += `<td>${escapeHtml(cell || '')}</td>`;
                 });
@@ -346,6 +349,8 @@
 
             html += '</tbody></table></div>';
             container.innerHTML = html;
+            
+            console.log('Data displayed successfully');
         }
 
         function showLoading(show) {
