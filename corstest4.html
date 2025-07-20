@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apps Script CORS Troubleshooting</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .step-card {
+            border-left: 4px solid #007bff;
+            margin-bottom: 20px;
+        }
+        .error-card {
+            border-left: 4px solid #dc3545;
+        }
+        .success-card {
+            border-left: 4px solid #28a745;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>🔧 Google Apps Script CORS Troubleshooting</h1>
+        <p class="lead">Follow these steps to fix POST and UPDATE test failures</p>
+
+        <!-- Step 1: Check Deployment -->
+        <div class="card step-card">
+            <div class="card-body">
+                <h4>Step 1: Verify Your Deployment Settings</h4>
+                <p>The most common issue is incorrect deployment configuration:</p>
+                <ol>
+                    <li>Open your Google Apps Script project</li>
+                    <li>Click <strong>"Deploy"</strong> → <strong>"Manage deployments"</strong></li>
+                    <li>Check your current deployment settings:</li>
+                </ol>
+                
+                <div class="alert alert-warning">
+                    <strong>Required Settings:</strong>
+                    <ul>
+                        <li><strong>Type:</strong> Web app</li>
+                        <li><strong>Execute as:</strong> Me (your email)</li>
+                        <li><strong>Who has access:</strong> Anyone</li>
+                    </ul>
+                </div>
+                
+                <p>If these settings are wrong, click the pencil icon to edit and update them.</p>
+            </div>
+        </div>
+
+        <!-- Step 2: Create New Deployment -->
+        <div class="card step-card">
+            <div class="card-body">
+                <h4>Step 2: Create a New Deployment (Recommended)</h4>
+                <p>Often, creating a fresh deployment fixes CORS issues:</p>
+                <ol>
+                    <li>Click <strong>"Deploy"</strong> → <strong>"New deployment"</strong></li>
+                    <li>Click the gear icon next to "Type" and select <strong>"Web app"</strong></li>
+                    <li>Set the following:
+                        <ul>
+                            <li><strong>Description:</strong> "CORS enabled web app"</li>
+                            <li><strong>Execute as:</strong> Me</li>
+                            <li><strong>Who has access:</strong> Anyone</li>
+                        </ul>
+                    </li>
+                    <li>Click <strong>"Deploy"</strong></li>
+                    <li>Copy the new Web app URL</li>
+                </ol>
+                
+                <div class="alert alert-info">
+                    <strong>Note:</strong> You may need to authorize the script again. Click "Authorize access" if prompted.
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Test Authorization -->
+        <div class="card step-card">
+            <div class="card-body">
+                <h4>Step 3: Test Your New URL</h4>
+                <div class="mb-3">
+                    <label for="newTestUrl" class="form-label">Your New Apps Script URL</label>
+                    <input type="text" class="form-control" id="newTestUrl" 
+                           placeholder="https://script.google.com/macros/s/NEW_DEPLOYMENT_ID/exec">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="newTestSheet" class="form-label">Sheet Name</label>
+                    <input type="text" class="form-control" id="newTestSheet" value="Sheet40">
+                </div>
+                
+                <div class="d-grid gap-2 d-md-block">
+                    <button class="btn btn-primary" onclick="testNewGet()">Test GET</button>
+                    <button class="btn btn-warning" onclick="testNewPost()">Test POST</button>
+                    <button class="btn btn-info" onclick="testNewUpdate()">Test UPDATE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Enhanced Script -->
+        <div class="card step-card">
+            <div class="card-body">
+                <h4>Step 4: Enhanced Apps Script (Optional)</h4>
+                <p>If you're still having issues, replace your Apps Script code with this enhanced version that includes better CORS handling:</p>
+                
+                <button class="btn btn-secondary mb-2" onclick="copyEnhancedScript()">📋 Copy Enhanced Script</button>
+                
+                <div class="code-block" id="enhancedScript">// Enhanced Google Apps Script with better CORS handling
+const SPREADSHEET_ID = '1zyONkhPJsJl6Cs_SY3Z4n3N_zH0myDG9D5zeSA3vyys';
+
+function doGet(e) {
+  return handleRequest(e, 'GET');
+}
+
+function doPost(e) {
+  return handleRequest(e, 'POST');
+}
+
+function doOptions(e) {
+  // Handle preflight CORS requests
+  return createCORSResponse('');
+}
+
+function handleRequest(e, method) {
+  try {
+    console.log(`=== ${method} REQUEST START ===`);
+    
+    // Check if spreadsheet ID was replaced
+    if (SPREADSHEET_ID === 'YOUR_SPREADSHEET_ID_HERE') {
+      return createCORSResponse({
+        success: false,
+        error: 'Spreadsheet ID not configured'
+      });
+    }
+    
+    if (method === 'GET') {
+      return handleGetRequest(e);
+    } else if (method === 'POST') {
+      return handlePostRequest(e);
+    }
+    
+  } catch (error) {
+    console.error(`${method} Error:`, error);
+    return createCORSResponse({
+      success: false,
+      error: error.toString(),
+      stack: error.stack
+    });
+  }
+}
+
+function handleGetRequest(e) {
+  const sheetName = e.parameter.sheet || 'Sheet40';
+  console.log('GET - Requesting sheet:', sheetName);
+  
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    const allSheets = spreadsheet.getSheets().map(s => s.getName());
+    return createCORSResponse({
+      success: false,
+      error: `Sheet "${sheetName}" not found`,
+      availableSheets: allSheets
+    });
+  }
+  
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  console.log('GET - Retrieved values count:', values.length);
+  
+  return createCORSResponse({
+    success: true,
+    data: values,
+    rows: values.length,
+    message: `Data retrieved from ${sheetName}`
+  });
+}
+
+function handlePostRequest(e) {
+  if (!e.postData || !e.postData.contents) {
+    return createCORSResponse({
+      success: false,
+      error: 'No POST data received'
+    });
+  }
+  
+  let requestData;
+  try {
+    requestData = JSON.parse(e.postData.contents);
+  } catch (parseError) {
+    return createCORSResponse({
+      success: false,
+      error: 'Invalid JSON: ' + parseError.toString()
+    });
+  }
+  
+  const { action, sheetName = 'Sheet40', values, row } = requestData;
+  console.log('POST - Action:', action, 'Sheet:', sheetName);
+  
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    const allSheets = spreadsheet.getSheets().map(s => s.getName());
+    return createCORSResponse({
+      success: false,
+      error: `Sheet "${sheetName}" not found`,
+      availableSheets: allSheets
+    });
+  }
+  
+  let response;
+  
+  switch (action) {
+    case 'append':
+      sheet.appendRow(values);
+      response = {
+        success: true,
+        message: 'Row appended successfully',
+        action: 'append',
+        values: values
+      };
+      break;
+      
+    case 'update':
+      if (!row || row < 1) {
+        throw new Error('Invalid row number: ' + row);
+      }
+      const updateRange = sheet.getRange(row, 1, 1, values.length);
+      updateRange.setValues([values]);
+      response = {
+        success: true,
+        message: `Row ${row} updated successfully`,
+        action: 'update',
+        row: row,
+        values: values
+      };
+      break;
+      
+    default:
+      throw new Error(`Unknown action: ${action}`);
+  }
+  
+  return createCORSResponse(response);
+}
+
+function createCORSResponse(data) {
+  // This is the critical fix - Google Apps Script automatically handles CORS
+  // when deployed with proper settings, so we just return the JSON response
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}</div>
+            </div>
+        </div>
+
+        <!-- Common Issues -->
+        <div class="card error-card">
+            <div class="card-body">
+                <h4>🚨 Common Issues & Solutions</h4>
+                
+                <h6>1. "Script function not found" Error</h6>
+                <p><strong>Solution:</strong> Make sure you saved your Apps Script before deploying.</p>
+                
+                <h6>2. "Authorization required" Error</h6>
+                <p><strong>Solution:</strong> Visit your deployment URL in a browser first to authorize the script.</p>
+                
+                <h6>3. CORS Policy Errors</h6>
+                <p><strong>Solution:</strong> Ensure "Who has access" is set to "Anyone" in deployment settings.</p>
+                
+                <h6>4. 403 Forbidden Errors</h6>
+                <p><strong>Solution:</strong> Check that your Google account has edit access to the spreadsheet.</p>
+            </div>
+        </div>
+
+        <div id="newResults" class="mt-3"></div>
+    </div>
+
+    <script>
+        function addNewResult(title, content, type = 'info') {
+            const results = document.getElementById('newResults');
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger',
+                'warning': 'alert-warning',
+                'info': 'alert-info'
+            }[type] || 'alert-info';
+            
+            const div = document.createElement('div');
+            div.className = `alert ${alertClass}`;
+            div.innerHTML = `<h6>${title}</h6>${content}`;
+            results.appendChild(div);
+        }
+
+        function copyEnhancedScript() {
+            const script = document.getElementById('enhancedScript').textContent;
+            navigator.clipboard.writeText(script).then(() => {
+                addNewResult('✅ Copied', 'Enhanced script copied to clipboard!', 'success');
+            }).catch(() => {
+                addNewResult('❌ Copy Failed', 'Please manually copy the script above', 'error');
+            });
+        }
+
+        async function testNewGet() {
+            const url = document.getElementById('newTestUrl').value;
+            const sheet = document.getElementById('newTestSheet').value;
+            
+            if (!url) {
+                addNewResult('❌ Error', 'Please enter your Apps Script URL', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${url}?sheet=${sheet}`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addNewResult('✅ GET Test Success', 
+                        `Retrieved ${data.rows} rows from ${sheet}`, 'success');
+                } else {
+                    addNewResult('❌ GET Test Failed', data.error || 'Unknown error', 'error');
+                }
+
+            } catch (error) {
+                console.error('GET Test Error:', error);
+                addNewResult('❌ GET Test Failed', error.message, 'error');
+            }
+        }
+
+        async function testNewPost() {
+            const url = document.getElementById('newTestUrl').value;
+            const sheet = document.getElementById('newTestSheet').value;
+            
+            if (!url) {
+                addNewResult('❌ Error', 'Please enter your Apps Script URL', 'error');
+                return;
+            }
+
+            const testData = {
+                action: 'append',
+                sheetName: sheet,
+                values: ['Test1', 'Test2', 'Test3', 'Test4']
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData),
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addNewResult('✅ POST Test Success', 
+                        `${data.message}`, 'success');
+                } else {
+                    addNewResult('❌ POST Test Failed', data.error || 'Unknown error', 'error');
+                }
+
+            } catch (error) {
+                console.error('POST Test Error:', error);
+                addNewResult('❌ POST Test Failed', 
+                    `${error.message}<br><small>Check deployment settings</small>`, 'error');
+            }
+        }
+
+        async function testNewUpdate() {
+            const url = document.getElementById('newTestUrl').value;
+            const sheet = document.getElementById('newTestSheet').value;
+            
+            if (!url) {
+                addNewResult('❌ Error', 'Please enter your Apps Script URL', 'error');
+                return;
+            }
+
+            const testData = {
+                action: 'update',
+                sheetName: sheet,
+                row: 1,
+                values: ['Updated1', 'Updated2', 'Updated3', 'Updated4']
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData),
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addNewResult('✅ UPDATE Test Success', 
+                        `${data.message}`, 'success');
+                } else {
+                    addNewResult('❌ UPDATE Test Failed', data.error || 'Unknown error', 'error');
+                }
+
+            } catch (error) {
+                console.error('UPDATE Test Error:', error);
+                addNewResult('❌ UPDATE Test Failed', error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
