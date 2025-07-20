@@ -4,7 +4,7 @@ const SHEET_ID = '1zyONkhPJsJl6Cs_SY3Z4n3N_zH0myDG9D5zeSA3vyys';
 function doGet(e) {
   try {
     const sheetName = e.parameter.sheet || 'Sheet40';
-    console.log('GET request for sheet:', sheetName);
+    console.log('GET request for sheet:', sheetName); 
     
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(sheetName);
     if (!sheet) {
