@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apps Script Deployment Checker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <h2>🔧 Apps Script Deployment Checker</h2>
+                <p class="text-muted">Let's make sure your deployment is set up correctly</p>
+                
+                <div class="alert alert-info">
+                    <h6>📋 Pre-Test Checklist - Did you:</h6>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="check1">
+                        <label class="form-check-label" for="check1">
+                            <strong>Replace the entire Apps Script code</strong> with the new CORS version?
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="check2">
+                        <label class="form-check-label" for="check2">
+                            <strong>Replace "YOUR_SPREADSHEET_ID_HERE"</strong> with your actual spreadsheet ID?
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="check3">
+                        <label class="form-check-label" for="check3">
+                            <strong>Save the script</strong> (Ctrl+S) after making changes?
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="check4">
+                        <label class="form-check-label" for="check4">
+                            Create a <strong>NEW deployment</strong> (not update existing)?
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="check5">
+                        <label class="form-check-label" for="check5">
+                            Set permissions to <strong>"Execute as: Me"</strong> and <strong>"Who has access: Anyone"</strong>?
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="check6">
+                        <label class="form-check-label" for="check6">
+                            Copy the <strong>NEW deployment URL</strong> (not the old one)?
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="scriptUrl" class="form-label">Your Apps Script URL</label>
+                            <input type="text" class="form-control" id="scriptUrl" 
+                                   placeholder="https://script.google.com/macros/s/DEPLOYMENT_ID/exec">
+                        </div>
+                        
+                        <button class="btn btn-warning me-2" onclick="testBasicURL()">🔍 Test Basic URL Access</button>
+                        <button class="btn btn-info me-2" onclick="analyzeURL()">📋 Analyze URL</button>
+                        <button class="btn btn-secondary" onclick="clearResults()">Clear</button>
+                    </div>
+                </div>
+                
+                <div id="results" class="mt-3"></div>
+                
+                <div class="mt-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6>🚨 Common Issues & How to Fix Them</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>❌ Issue: All tests fail</h6>
+                                    <ul class="small">
+                                        <li>Wrong URL (using script editor URL instead of deployment URL)</li>
+                                        <li>Deployment not created or not active</li>
+                                        <li>Wrong permissions on deployment</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>🔧 Fix:</h6>
+                                    <ol class="small">
+                                        <li>Go to your Apps Script editor</li>
+                                        <li>Click "Deploy" → "New deployment"</li>
+                                        <li>Type: "Web app"</li>
+                                        <li>Execute as: "Me"</li>
+                                        <li>Access: "Anyone"</li>
+                                        <li>Copy the NEW URL</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0">⚡ Quick Fix: Try This Simpler Apps Script</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>If you're still having issues, try this minimal script first:</p>
+                            <button class="btn btn-sm btn-primary" onclick="showSimpleScript()">Show Simple Script</button>
+                            <div id="simpleScript" class="mt-2" style="display: none;">
+                                <pre class="bg-light p-2 small"><code>function doGet() {
+  return ContentService.createTextOutput('Hello World!');
+}
+
+function doPost() {
+  return ContentService.createTextOutput('POST received!');
+}</code></pre>
+                                <p class="small text-muted">Deploy this simple version first to test if the deployment process works at all.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addResult(content, type = 'info') {
+            const results = document.getElementById('results');
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger',
+                'warning': 'alert-warning',
+                'info': 'alert-info'
+            }[type] || 'alert-info';
+            
+            const div = document.createElement('div');
+            div.className = `alert ${alertClass}`;
+            div.innerHTML = content;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function analyzeURL() {
+            const url = document.getElementById('scriptUrl').value;
+            clearResults();
+            
+            if (!url) {
+                addResult('❌ Please enter your Apps Script URL first', 'error');
+                return;
+            }
+            
+            let issues = [];
+            let suggestions = [];
+            
+            // Check URL format
+            if (!url.includes('script.google.com')) {
+                issues.push('URL doesn\'t contain "script.google.com"');
+            }
+            
+            if (!url.includes('/macros/s/')) {
+                issues.push('URL doesn\'t contain "/macros/s/" (not a web app deployment)');
+                suggestions.push('Make sure you\'re using the Web App deployment URL, not the script editor URL');
+            }
+            
+            if (!url.endsWith('/exec')) {
+                issues.push('URL doesn\'t end with "/exec"');
+                suggestions.push('Web App URLs should end with /exec');
+            }
+            
+            if (url.includes('/edit')) {
+                issues.push('This looks like a script editor URL, not a deployment URL');
+                suggestions.push('Go to Deploy → New Deployment to get the correct URL');
+            }
+            
+            // Extract deployment ID
+            const match = url.match(/\/macros\/s\/([^\/]+)\/exec/);
+            if (match) {
+                const deploymentId = match[1];
+                addResult(`✅ <strong>URL Analysis:</strong><br>
+                    Deployment ID: <code>${deploymentId}</code><br>
+                    Format: Looks correct`, 'success');
+            }
+            
+            if (issues.length > 0) {
+                addResult(`❌ <strong>URL Issues Found:</strong><br>
+                    • ${issues.join('<br>• ')}`, 'error');
+            }
+            
+            if (suggestions.length > 0) {
+                addResult(`💡 <strong>Suggestions:</strong><br>
+                    • ${suggestions.join('<br>• ')}`, 'warning');
+            }
+            
+            if (issues.length === 0) {
+                addResult('🎉 URL format looks perfect! Ready to test.', 'success');
+            }
+        }
+        
+        async function testBasicURL() {
+            const url = document.getElementById('scriptUrl').value;
+            clearResults();
+            
+            if (!url) {
+                addResult('❌ Please enter your Apps Script URL first', 'error');
+                return;
+            }
+            
+            addResult('🔄 Testing basic connectivity...', 'info');
+            
+            // Test 1: Simple fetch to see if URL exists
+            try {
+                console.log('Testing URL:', url);
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'no-cors', // This bypasses CORS to test basic connectivity
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                // With no-cors, we can't read the response, but if it doesn't throw, the URL exists
+                addResult('✅ <strong>Basic connectivity test PASSED!</strong><br>The URL is reachable and responds', 'success');
+                
+                // Now test with CORS
+                try {
+                    const corsResponse = await fetch(url, {
+                        method: 'GET',
+                        mode: 'cors'
+                    });
+                    
+                    if (corsResponse.ok) {
+                        const text = await corsResponse.text();
+                        addResult(`✅ <strong>CORS test PASSED!</strong><br>Response: <code>${text}</code>`, 'success');
+                    } else {
+                        addResult(`⚠️ <strong>CORS test partial:</strong> Got response but status ${corsResponse.status}`, 'warning');
+                    }
+                } catch (corsError) {
+                    addResult(`❌ <strong>CORS test FAILED:</strong> ${corsError.message}<br>
+                        This means your Apps Script isn't handling CORS properly.`, 'error');
+                }
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    addResult('⏰ <strong>Request timeout:</strong> The URL didn\'t respond within 10 seconds.<br>This usually means the URL is wrong or the deployment isn\'t active.', 'error');
+                } else {
+                    addResult(`❌ <strong>Connection failed:</strong> ${error.message}<br>
+                        This usually means:<br>
+                        • Wrong URL<br>
+                        • Deployment doesn't exist<br>
+                        • Network issue`, 'error');
+                }
+                
+                // Provide specific help
+                addResult(`🔧 <strong>Next steps:</strong><br>
+                    1. Double-check your deployment URL<br>
+                    2. Make sure you created a NEW deployment<br>
+                    3. Verify deployment permissions are set to "Anyone"<br>
+                    4. Try the simple script test below`, 'warning');
+            }
+        }
+        
+        function showSimpleScript() {
+            const div = document.getElementById('simpleScript');
+            if (div.style.display === 'none') {
+                div.style.display = 'block';
+            } else {
+                div.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
