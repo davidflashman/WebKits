@@ -48,7 +48,7 @@
                 </div>
                 <div class="col-md-4">
                     <label for="sheetName" class="form-label">Sheet Name</label>
-                    <input type="text" class="form-control" id="sheetName" value="Sheet40">
+                    <input type="text" class="form-control" id="sheetName" value="Sheet1">
                 </div>
             </div>
         </div>
@@ -173,8 +173,13 @@
                         sheetName: sheetName,
                         values: values
                     }),
-                    mode: 'cors'
+                    mode: 'cors',
+                    cache: 'no-cache'
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
                 const result = await response.json();
                 
@@ -187,7 +192,12 @@
                 }
 
             } catch (error) {
-                showError('Network error: ' + error.message);
+                console.error('Detailed error:', error);
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showError('CORS Error: Check your Apps Script deployment settings. Make sure "Who has access" is set to "Anyone" and you\'re using the latest deployment URL.');
+                } else {
+                    showError('Network error: ' + error.message);
+                }
             } finally {
                 showLoading(false);
             }
@@ -257,22 +267,46 @@
             hideMessages();
 
             try {
+                console.log('Loading data from:', `${scriptUrl}?sheet=${sheetName}`);
+                
                 const response = await fetch(`${scriptUrl}?sheet=${sheetName}`, {
                     method: 'GET',
-                    mode: 'cors'
+                    mode: 'cors',
+                    cache: 'no-cache'
                 });
 
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const result = await response.json();
+                console.log('Received data:', result);
                 
                 if (result.success) {
-                    displayData(result.data);
-                    document.getElementById('dataCount').textContent = `${result.rows} rows`;
+                    if (result.data && result.data.length > 0) {
+                        displayData(result.data);
+                        document.getElementById('dataCount').textContent = `${result.rows} rows`;
+                        showSuccess('Data loaded successfully!');
+                    } else {
+                        document.getElementById('dataContainer').innerHTML = 
+                            '<p class="text-center text-muted p-4">No data found in the sheet</p>';
+                        document.getElementById('dataCount').textContent = '0 rows';
+                        showError('Sheet appears to be empty');
+                    }
                 } else {
                     showError(result.error || 'Failed to load data');
                 }
 
             } catch (error) {
-                showError('Network error: ' + error.message);
+                console.error('Load data error:', error);
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showError('Cannot connect to Apps Script. Check your URL and deployment settings.');
+                } else {
+                    showError('Network error: ' + error.message);
+                }
             } finally {
                 showLoading(false);
             }
