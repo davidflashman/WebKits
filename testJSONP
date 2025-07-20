@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Apps Script JSONP Tester</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .config-section {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .test-section {
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .test-section:hover {
+            border-color: #4299e1;
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.1);
+        }
+
+        .test-header {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .test-body {
+            padding: 20px;
+        }
+
+        input[type="text"], input[type="url"], input[type="number"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #f0fff4;
+            border: 2px solid #68d391;
+            color: #22543d;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            border: 2px solid #fc8181;
+            color: #742a2a;
+        }
+
+        .status.pending {
+            background: #fef5e7;
+            border: 2px solid #f6ad55;
+            color: #744210;
+        }
+
+        .response {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .help-text {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+        }
+
+        .clear-btn:hover {
+            box-shadow: 0 5px 15px rgba(229, 62, 62, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Google Apps Script JSONP Tester</h1>
+        
+        <div class="config-section">
+            <h3>📝 Configuration</h3>
+            <div class="form-group">
+                <label for="scriptUrl">Google Apps Script Web App URL:</label>
+                <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
+                <div class="help-text">Deploy your script as a web app and paste the URL here</div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sheetName">Sheet Name:</label>
+                    <input type="text" id="sheetName" value="Sheet40" placeholder="Sheet40">
+                </div>
+                <div class="form-group">
+                    <label for="callbackName">JSONP Callback:</label>
+                    <input type="text" id="callbackName" value="handleResponse" placeholder="handleResponse">
+                </div>
+            </div>
+        </div>
+
+        <!-- GET Test -->
+        <div class="test-section">
+            <div class="test-header">
+                <span>📊 GET Test (Read Data)</span>
+                <button onclick="runGetTest()">Run GET Test</button>
+            </div>
+            <div class="test-body">
+                <div id="getStatus"></div>
+                <div id="getResponse" class="response" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- POST (via GET) Test -->
+        <div class="test-section">
+            <div class="test-header">
+                <span>➕ POST Test (Append Row)</span>
+                <button onclick="runPostTest()">Run POST Test</button>
+            </div>
+            <div class="test-body">
+                <div class="form-group">
+                    <label for="postValues">Values to Append (comma-separated):</label>
+                    <input type="text" id="postValues" value="Test Value 1,Test Value 2,Test Value 3" placeholder="Value1,Value2,Value3">
+                    <div class="help-text">Enter comma-separated values to add as a new row</div>
+                </div>
+                <div id="postStatus"></div>
+                <div id="postResponse" class="response" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- UPDATE Test -->
+        <div class="test-section">
+            <div class="test-header">
+                <span>✏️ UPDATE Test (Update Row)</span>
+                <button onclick="runUpdateTest()">Run UPDATE Test</button>
+            </div>
+            <div class="test-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="updateRow">Row Number:</label>
+                        <input type="number" id="updateRow" value="1" min="1" placeholder="1">
+                        <div class="help-text">Row number to update (1-based)</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="updateValues">New Values (comma-separated):</label>
+                        <input type="text" id="updateValues" value="Updated Value 1,Updated Value 2,Updated Value 3" placeholder="Value1,Value2,Value3">
+                    </div>
+                </div>
+                <div id="updateStatus"></div>
+                <div id="updateResponse" class="response" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- All Tests -->
+        <div class="test-section">
+            <div class="test-header">
+                <span>🔄 Run All Tests</span>
+                <div>
+                    <button onclick="runAllTests()">Run All Tests</button>
+                    <button onclick="clearAllResults()" class="clear-btn">Clear All</button>
+                </div>
+            </div>
+            <div class="test-body">
+                <div id="allTestsStatus"></div>
+            </div>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="test-section">
+            <div class="test-header">
+                <span>🐛 Debug Information</span>
+                <button onclick="showDebugInfo()">Show Debug Info</button>
+            </div>
+            <div class="test-body">
+                <div id="debugInfo" class="response" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global callback functions for JSONP
+        let testResults = {};
+
+        function handleResponse(data) {
+            console.log('JSONP Response received:', data);
+            if (window.currentTest) {
+                testResults[window.currentTest] = data;
+                displayResult(window.currentTest, data);
+                window.currentTest = null;
+            }
+        }
+
+        function getScriptUrl() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            if (!url) {
+                alert('Please enter your Google Apps Script URL first!');
+                return null;
+            }
+            return url;
+        }
+
+        function getSheetName() {
+            return document.getElementById('sheetName').value.trim() || 'Sheet40';
+        }
+
+        function getCallbackName() {
+            return document.getElementById('callbackName').value.trim() || 'handleResponse';
+        }
+
+        function setStatus(testType, status, message) {
+            const statusDiv = document.getElementById(testType + 'Status');
+            statusDiv.className = 'status ' + status;
+            statusDiv.innerHTML = status === 'pending' ? 
+                `<span class="loading"></span> ${message}` : 
+                message;
+        }
+
+        function displayResult(testType, data) {
+            const responseDiv = document.getElementById(testType + 'Response');
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = JSON.stringify(data, null, 2);
+            
+            if (data.success) {
+                setStatus(testType, 'success', '✅ Test passed successfully!');
+            } else {
+                setStatus(testType, 'error', '❌ Test failed: ' + data.error);
+            }
+        }
+
+        function makeJSONPRequest(url, testType) {
+            return new Promise((resolve, reject) => {
+                window.currentTest = testType;
+                
+                const script = document.createElement('script');
+                script.src = url;
+                
+                const timeout = setTimeout(() => {
+                    document.head.removeChild(script);
+                    reject(new Error('Request timeout'));
+                }, 30000);
+                
+                script.onload = () => {
+                    clearTimeout(timeout);
+                    document.head.removeChild(script);
+                    
+                    setTimeout(() => {
+                        if (testResults[testType]) {
+                            resolve(testResults[testType]);
+                        } else {
+                            reject(new Error('No response received'));
+                        }
+                    }, 100);
+                };
+                
+                script.onerror = () => {
+                    clearTimeout(timeout);
+                    document.head.removeChild(script);
+                    reject(new Error('Script loading failed'));
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+
+        async function runGetTest() {
+            const scriptUrl = getScriptUrl();
+            if (!scriptUrl) return;
+
+            const testType = 'get';
+            setStatus(testType, 'pending', 'Running GET test...');
+
+            try {
+                const url = `${scriptUrl}?callback=${getCallbackName()}&sheet=${getSheetName()}&_t=${Date.now()}`;
+                console.log('GET Test URL:', url);
+                
+                await makeJSONPRequest(url, testType);
+            } catch (error) {
+                console.error('GET Test Error:', error);
+                setStatus(testType, 'error', `❌ GET test failed: ${error.message}`);
+                const responseDiv = document.getElementById(testType + 'Response');
+                responseDiv.style.display = 'block';
+                responseDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function runPostTest() {
+            const scriptUrl = getScriptUrl();
+            if (!scriptUrl) return;
+
+            const testType = 'post';
+            const values = document.getElementById('postValues').value.trim();
+            
+            if (!values) {
+                alert('Please enter values to append!');
+                return;
+            }
+
+            setStatus(testType, 'pending', 'Running POST test...');
+
+            try {
+                const valuesArray = values.split(',').map(v => v.trim());
+                const valuesParam = encodeURIComponent(JSON.stringify(valuesArray));
+                const url = `${scriptUrl}?action=append&callback=${getCallbackName()}&sheet=${getSheetName()}&values=${valuesParam}&_t=${Date.now()}`;
+                
+                console.log('POST Test URL:', url);
+                console.log('Values to append:', valuesArray);
+                
+                await makeJSONPRequest(url, testType);
+            } catch (error) {
+                console.error('POST Test Error:', error);
+                setStatus(testType, 'error', `❌ POST test failed: ${error.message}`);
+                const responseDiv = document.getElementById(testType + 'Response');
+                responseDiv.style.display = 'block';
+                responseDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function runUpdateTest() {
+            const scriptUrl = getScriptUrl();
+            if (!scriptUrl) return;
+
+            const testType = 'update';
+            const row = document.getElementById('updateRow').value.trim();
+            const values = document.getElementById('updateValues').value.trim();
+            
+            if (!row || !values) {
+                alert('Please enter both row number and values to update!');
+                return;
+            }
+
+            setStatus(testType, 'pending', 'Running UPDATE test...');
+
+            try {
+                const valuesArray = values.split(',').map(v => v.trim());
+                const valuesParam = encodeURIComponent(JSON.stringify(valuesArray));
+                const url = `${scriptUrl}?action=update&callback=${getCallbackName()}&sheet=${getSheetName()}&row=${row}&values=${valuesParam}&_t=${Date.now()}`;
+                
+                console.log('UPDATE Test URL:', url);
+                console.log('Row to update:', row);
+                console.log('Values to update:', valuesArray);
+                
+                await makeJSONPRequest(url, testType);
+            } catch (error) {
+                console.error('UPDATE Test Error:', error);
+                setStatus(testType, 'error', `❌ UPDATE test failed: ${error.message}`);
+                const responseDiv = document.getElementById(testType + 'Response');
+                responseDiv.style.display = 'block';
+                responseDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function runAllTests() {
+            const allTestsStatus = document.getElementById('allTestsStatus');
+            allTestsStatus.className = 'status pending';
+            allTestsStatus.innerHTML = '<span class="loading"></span> Running all tests...';
+
+            try {
+                await runGetTest();
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between tests
+                
+                await runPostTest();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                await runUpdateTest();
+                
+                allTestsStatus.className = 'status success';
+                allTestsStatus.textContent = '✅ All tests completed! Check individual results above.';
+            } catch (error) {
+                allTestsStatus.className = 'status error';
+                allTestsStatus.textContent = '❌ Error running tests: ' + error.message;
+            }
+        }
+
+        function clearAllResults() {
+            ['get', 'post', 'update'].forEach(testType => {
+                const statusDiv = document.getElementById(testType + 'Status');
+                const responseDiv = document.getElementById(testType + 'Response');
+                statusDiv.innerHTML = '';
+                statusDiv.className = '';
+                responseDiv.style.display = 'none';
+                responseDiv.textContent = '';
+            });
+            
+            const allTestsStatus = document.getElementById('allTestsStatus');
+            allTestsStatus.innerHTML = '';
+            allTestsStatus.className = '';
+            
+            testResults = {};
+        }
+
+        function showDebugInfo() {
+            const debugInfo = {
+                timestamp: new Date().toISOString(),
+                scriptUrl: document.getElementById('scriptUrl').value,
+                sheetName: getSheetName(),
+                callbackName: getCallbackName(),
+                browser: navigator.userAgent,
+                testResults: testResults,
+                currentTest: window.currentTest
+            };
+
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.style.display = 'block';
+            debugDiv.textContent = JSON.stringify(debugInfo, null, 2);
+        }
+
+        // Auto-focus the URL input on page load
+        window.onload = function() {
+            document.getElementById('scriptUrl').focus();
+        };
+    </script>
+</body>
+</html>
