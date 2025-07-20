@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Apps Script Debug Tool</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .console-output { 
+            background: #1a1a1a; 
+            color: #00ff00; 
+            font-family: monospace; 
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2>🔍 Apps Script Debug Tool</h2>
+                <p class="text-muted">Let's figure out exactly what's going wrong with your POST request</p>
+                
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="scriptUrl" class="form-label">Apps Script URL</label>
+                            <input type="text" class="form-control" id="scriptUrl" 
+                                   placeholder="Paste your Apps Script URL">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="spreadsheetId" class="form-label">Spreadsheet ID (from your Google Sheets URL)</label>
+                            <input type="text" class="form-control" id="spreadsheetId" 
+                                   placeholder="1A2B3C4D5E6F... (the long ID from your sheets URL)">
+                            <div class="form-text">Found in your Google Sheets URL: docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit</div>
+                        </div>
+                        
+                        <button class="btn btn-primary me-2" onclick="runFullDiagnostic()">🔍 Run Full Diagnostic</button>
+                        <button class="btn btn-secondary" onclick="clearConsole()">Clear Console</button>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>🚦 Test Results</h6>
+                            </div>
+                            <div class="card-body" id="testResults">
+                                Click "Run Full Diagnostic" to start testing
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>💻 Debug Console</h6>
+                            </div>
+                            <div class="card-body p-2">
+                                <div id="debugConsole" class="console-output p-2" style="min-height: 200px;">
+                                    Debug information will appear here...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6>🛠️ Common Issues & Fixes</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="suggestions"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const console = document.getElementById('debugConsole');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#00ff00',
+                error: '#ff0000', 
+                warn: '#ffff00',
+                success: '#00ff88'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.color = colors[type] || colors.info;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            console.appendChild(logEntry);
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        function updateResults(content) {
+            document.getElementById('testResults').innerHTML = content;
+        }
+        
+        function updateSuggestions(suggestions) {
+            document.getElementById('suggestions').innerHTML = suggestions;
+        }
+        
+        function clearConsole() {
+            document.getElementById('debugConsole').innerHTML = '';
+            document.getElementById('testResults').innerHTML = 'Console cleared';
+            document.getElementById('suggestions').innerHTML = '';
+        }
+        
+        async function runFullDiagnostic() {
+            const scriptUrl = document.getElementById('scriptUrl').value;
+            const spreadsheetId = document.getElementById('spreadsheetId').value;
+            
+            clearConsole();
+            log('🚀 Starting comprehensive diagnostic...', 'info');
+            
+            let results = '';
+            let suggestions = [];
+            
+            // Step 1: URL Validation
+            log('Step 1: Validating URL format...', 'info');
+            if (!scriptUrl) {
+                log('❌ No URL provided', 'error');
+                updateResults('<div class="alert alert-danger">Please provide your Apps Script URL</div>');
+                return;
+            }
+            
+            if (!scriptUrl.includes('/macros/s/') || !scriptUrl.endsWith('/exec')) {
+                log('⚠️ URL format looks suspicious', 'warn');
+                suggestions.push('• Make sure your URL ends with /exec and contains /macros/s/');
+            } else {
+                log('✅ URL format looks correct', 'success');
+            }
+            
+            // Step 2: Basic connectivity test
+            log('Step 2: Testing basic connectivity...', 'info');
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                log(`GET Response: ${response.status} ${response.statusText}`, 
+                    response.ok ? 'success' : 'error');
+                
+                // Log all response headers
+                log('Response headers:', 'info');
+                for (const [key, value] of response.headers.entries()) {
+                    log(`  ${key}: ${value}`, 'info');
+                }
+                
+                if (response.ok) {
+                    const data = await response.text();
+                    log(`GET Response body: ${data}`, 'success');
+                    results += '<div class="alert alert-success">✅ Basic connectivity: OK</div>';
+                } else {
+                    results += '<div class="alert alert-danger">❌ Basic connectivity failed</div>';
+                    suggestions.push('• Check that your deployment is active and accessible');
+                }
+            } catch (error) {
+                log(`GET Error: ${error.message}`, 'error');
+                results += '<div class="alert alert-danger">❌ Basic connectivity: FAILED</div>';
+                if (error.message.includes('CORS')) {
+                    suggestions.push('• CORS headers are missing - check your doOptions() function');
+                }
+            }
+            
+            // Step 3: OPTIONS preflight test
+            log('Step 3: Testing CORS preflight (OPTIONS)...', 'info');
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'OPTIONS',
+                    mode: 'cors',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                log(`OPTIONS Response: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                const corsOrigin = response.headers.get('Access-Control-Allow-Origin');
+                const corsMethods = response.headers.get('Access-Control-Allow-Methods');
+                const corsHeaders = response.headers.get('Access-Control-Allow-Headers');
+                
+                log(`CORS Origin: ${corsOrigin}`, corsOrigin ? 'success' : 'error');
+                log(`CORS Methods: ${corsMethods}`, corsMethods ? 'success' : 'error');
+                log(`CORS Headers: ${corsHeaders}`, corsHeaders ? 'success' : 'error');
+                
+                if (corsOrigin && corsMethods && corsHeaders) {
+                    results += '<div class="alert alert-success">✅ CORS preflight: OK</div>';
+                } else {
+                    results += '<div class="alert alert-warning">⚠️ CORS preflight: Missing headers</div>';
+                    suggestions.push('• Add doOptions() function to handle CORS preflight');
+                }
+            } catch (error) {
+                log(`OPTIONS Error: ${error.message}`, 'error');
+                results += '<div class="alert alert-danger">❌ CORS preflight: FAILED</div>';
+            }
+            
+            // Step 4: POST test with detailed error handling
+            log('Step 4: Testing POST request...', 'info');
+            try {
+                const postData = {
+                    action: 'append',
+                    sheetName: 'Sheet1',
+                    values: ['Debug test', new Date().toISOString(), 'From diagnostic tool']
+                };
+                
+                log(`POST Data: ${JSON.stringify(postData)}`, 'info');
+                
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(postData)
+                });
+                
+                log(`POST Response: ${response.status} ${response.statusText}`, 
+                    response.ok ? 'success' : 'error');
+                
+                // Log response headers
+                for (const [key, value] of response.headers.entries()) {
+                    log(`  ${key}: ${value}`, 'info');
+                }
+                
+                const responseText = await response.text();
+                log(`POST Response body: ${responseText}`, 'info');
+                
+                if (response.ok) {
+                    try {
+                        const result = JSON.parse(responseText);
+                        if (result.success) {
+                            results += '<div class="alert alert-success">🎉 POST request: SUCCESS!</div>';
+                            log('POST successful!', 'success');
+                        } else {
+                            results += `<div class="alert alert-warning">⚠️ POST reached script but failed: ${result.error}</div>`;
+                            suggestions.push(`• Script error: ${result.error}`);
+                            if (!spreadsheetId) {
+                                suggestions.push('• Make sure you replaced YOUR_SPREADSHEET_ID_HERE in your Apps Script');
+                            }
+                        }
+                    } catch (jsonError) {
+                        results += '<div class="alert alert-warning">⚠️ POST succeeded but response is not JSON</div>';
+                        log(`JSON parse error: ${jsonError.message}`, 'warn');
+                    }
+                } else {
+                    results += `<div class="alert alert-danger">❌ POST failed: ${response.status}</div>`;
+                    
+                    if (response.status === 404) {
+                        suggestions.push('• 404 Error - Check your deployment URL');
+                    } else if (response.status === 403) {
+                        suggestions.push('• 403 Error - Check deployment permissions (should be "Anyone")');
+                    }
+                }
+                
+            } catch (error) {
+                log(`POST Error: ${error.message}`, 'error');
+                results += '<div class="alert alert-danger">❌ POST request: NETWORK ERROR</div>';
+                
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    suggestions.push('• Network error - likely CORS or connection issue');
+                }
+            }
+            
+            // Step 5: Spreadsheet ID validation
+            if (spreadsheetId) {
+                log('Step 5: Validating Spreadsheet ID format...', 'info');
+                if (spreadsheetId.length > 20 && /^[a-zA-Z0-9_-]+$/.test(spreadsheetId)) {
+                    log('✅ Spreadsheet ID format looks correct', 'success');
+                    results += '<div class="alert alert-success">✅ Spreadsheet ID format: OK</div>';
+                } else {
+                    log('⚠️ Spreadsheet ID format looks suspicious', 'warn');
+                    results += '<div class="alert alert-warning">⚠️ Spreadsheet ID format: Questionable</div>';
+                    suggestions.push('• Double-check your spreadsheet ID from the Google Sheets URL');
+                }
+            } else {
+                suggestions.push('• Provide your Spreadsheet ID to verify it\'s correct');
+            }
+            
+            updateResults(results);
+            
+            if (suggestions.length > 0) {
+                const suggestionsList = suggestions.map(s => `<li>${s}</li>`).join('');
+                updateSuggestions(`<ul class="mb-0">${suggestionsList}</ul>`);
+            } else {
+                updateSuggestions('<div class="alert alert-success">🎉 Everything looks good! Your setup should be working.</div>');
+            }
+            
+            log('🏁 Diagnostic complete!', 'success');
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
